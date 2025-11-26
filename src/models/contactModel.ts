@@ -1,15 +1,18 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 // Define the TypeScript interface for Contact documents
-export interface IContact extends Document {
+export interface IContact {
   name: string;
   family: string;
   message: string;
   email: string;
 }
 
+// Mongoose document type
+export type ContactDocument = IContact & Document;
+
 // Define the schema
-const ContactSchema: Schema<IContact> = new Schema(
+const ContactSchema: Schema<ContactDocument> = new Schema(
   {
     name: {
       type: String,
@@ -32,7 +35,7 @@ const ContactSchema: Schema<IContact> = new Schema(
 );
 
 // Create the model
-const Contact = mongoose.model<IContact>("Contact", ContactSchema);
+const Contact = mongoose.model<ContactDocument>("Contact", ContactSchema);
 
 // Export it properly
 export default Contact;

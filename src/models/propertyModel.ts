@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
 // Define the TypeScript interface for Property documents
-export interface IProperty extends Document {
+export interface IProperty {
   title: string;
   desc: string;
   location: string;
@@ -12,17 +12,20 @@ export interface IProperty extends Document {
   pets: string;
   couples: string;
   minors: string;
-  owner: Types.ObjectId;              // reference to User
-  contractCategory: Types.ObjectId;   // reference to ContractCategory
-  typeCategory: Types.ObjectId;       // reference to TypeCategory
-  image?: Record<string, any>;        // flexible object type
+  owner: Types.ObjectId;            // reference to User
+  contractCategory: Types.ObjectId; // reference to ContractCategory
+  typeCategory: Types.ObjectId;     // reference to TypeCategory
+  image?: Record<string, any>;      // flexible object
   city: string;
-  latlng?: any[];                     // refine if you know structure (e.g. [number, number])
+  latlng?: any[];                   // e.g. [lat, lng]
   area: string;
 }
 
+// Mongoose document type
+export type PropertyDocument = IProperty & Document;
+
 // Define the schema
-const propertySchema: Schema<IProperty> = new Schema(
+const propertySchema: Schema<PropertyDocument> = new Schema(
   {
     title: {
       type: String,
@@ -84,7 +87,6 @@ const propertySchema: Schema<IProperty> = new Schema(
     },
     image: {
       type: Object,
-      required: false,
     },
     city: {
       type: String,
@@ -92,7 +94,6 @@ const propertySchema: Schema<IProperty> = new Schema(
     },
     latlng: {
       type: Array,
-      required: false,
     },
     area: {
       type: String,
@@ -103,7 +104,7 @@ const propertySchema: Schema<IProperty> = new Schema(
 );
 
 // Create the model
-const Property = mongoose.model<IProperty>("Property", propertySchema);
+const Property = mongoose.model<PropertyDocument>("Property", propertySchema);
 
 // Export it properly
 export default Property;

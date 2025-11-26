@@ -5,18 +5,21 @@ export interface INewsItem {
   title: string;
   desc: string;
   img?: string;
-  type?: Record<string, any>; // you can refine this type if you know the structure
+  type?: Record<string, any>; // flexible object
 }
 
 // Define the TypeScript interface for News documents
-export interface INews extends Document {
+export interface INews {
   category: string;
   mainTitle: string;
   items: INewsItem[];
 }
 
+// Mongoose document type
+export type NewsDocument = INews & Document;
+
 // Define the schema
-const NewsSchema: Schema<INews> = new Schema(
+const NewsSchema: Schema<NewsDocument> = new Schema(
   {
     category: {
       type: String,
@@ -49,7 +52,7 @@ const NewsSchema: Schema<INews> = new Schema(
 );
 
 // Create the model
-const News = mongoose.model<INews>("News", NewsSchema);
+const News = mongoose.model<NewsDocument>("News", NewsSchema);
 
 // Export it properly
 export default News;

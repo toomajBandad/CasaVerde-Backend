@@ -1,18 +1,21 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
 // Define the TypeScript interface for User documents
-export interface IUser extends Document {
+export interface IUser {
   username: string;
   email: string;
   password: string;
-  recentSearches?: Record<string, any>; // refine if you know exact structure
-  messages?: any[];                     // refine if you know message type
-  favorites?: any[];                    // refine if you know favorite type
+  recentSearches?: Record<string, any>;
+  messages?: any[];
+  favorites?: Types.ObjectId[]; // array of Property IDs
   image?: string;
 }
 
+// Mongoose document type
+export type UserDocument = IUser & Document;
+
 // Define the schema
-const userSchema: Schema<IUser> = new Schema(
+const userSchema: Schema<UserDocument> = new Schema(
   {
     username: {
       type: String,
@@ -25,34 +28,40 @@ const userSchema: Schema<IUser> = new Schema(
       type: String,
       required: true,
       unique: true,
-      match: /.+\@.+\..+/, // Simple email regex pattern
+      match: /.+\@.+\..+/,
     },
     password: {
       type: String,
       required: true,
     },
+
     recentSearches: {
-      type: Object,
-      required: false,
+      type: Array,
+      default: [],
     },
+
     messages: {
       type: Array,
-      required: false,
+      default: [],
     },
-    favorites: {
-      type: Array,
-      required: false,
-    },
+
+    favorites: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Property", // reference to Property model
+      }
+    ],
+
     image: {
       type: String,
-      required: false,
+      default: "",
     },
   },
   { timestamps: true }
 );
 
 // Create the model
-const User = mongoose.model<IUser>("User", userSchema);
+const User = mongoose.model<UserDocument>("User", userSchema);
 
 // Export it properly
 export default User;

@@ -1,13 +1,16 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 // Define the TypeScript interface for your documents
-export interface IContractCategory extends Document {
-  name: "BUY" | "RENT" | "SHARE";  // restrict to enum values
+export interface IContractCategory {
+  name: "BUY" | "RENT" | "SHARE"; // allowed enum values
   desc: string;
 }
 
+// Mongoose document type
+export type ContractCategoryDocument = IContractCategory & Document;
+
 // Define the schema
-const contractCategorySchema: Schema<IContractCategory> = new Schema(
+const contractCategorySchema: Schema<ContractCategoryDocument> = new Schema(
   {
     name: {
       type: String,
@@ -24,7 +27,7 @@ const contractCategorySchema: Schema<IContractCategory> = new Schema(
 );
 
 // Create the model
-const ContractCategory = mongoose.model<IContractCategory>(
+const ContractCategory = mongoose.model<ContractCategoryDocument>(
   "ContractCategory",
   contractCategorySchema
 );

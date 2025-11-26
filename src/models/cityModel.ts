@@ -1,14 +1,17 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 // Define the TypeScript interface for City documents
-export interface ICity extends Document {
+export interface ICity {
   province: string;
   name: string;
-  location?: string[]; 
+  location?: string[]; // optional array of strings
 }
 
+// Mongoose document type
+export type CityDocument = ICity & Document;
+
 // Define the schema
-const CitySchema: Schema<ICity> = new Schema(
+const CitySchema: Schema<CityDocument> = new Schema(
   {
     province: {
       type: String,
@@ -27,7 +30,7 @@ const CitySchema: Schema<ICity> = new Schema(
 );
 
 // Create the model
-const City = mongoose.model<ICity>("City", CitySchema);
+const City = mongoose.model<CityDocument>("City", CitySchema);
 
 // Export it properly
 export default City;
