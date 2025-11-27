@@ -1,0 +1,1 @@
+{"version":3,"file":"typeCategoryModel.d.ts","sourceRoot":"","sources":["../../src/models/typeCategoryModel.ts"],"names":[],"mappings":"AAAA,OAAO,QAA8B,MAAM,UAAU,CAAC;AAGtD,MAAM,WAAW,aAAa;IAC5B,IAAI,EAAE,WAAW,GAAG,OAAO,GAAG,MAAM,GAAG,MAAM,GAAG,QAAQ,GAAG,QAAQ,GAAG,SAAS,CAAC;IAChF,IAAI,EAAE,MAAM,CAAC;CACd;AAoBD,QAAA,MAAM,YAAY;;;;OAGjB,CAAC;AAGF,eAAe,YAAY,CAAC"}

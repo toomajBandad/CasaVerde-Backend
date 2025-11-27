@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import * as brevo from "@getbrevo/brevo";
+import { Types } from "mongoose";
 
 dotenv.config();
 const secretKey = process.env.JWT_SECRET as string;
@@ -301,8 +302,10 @@ export const getUserFavorite = async (req: Request, res: Response): Promise<void
 // Add property to favorites
 export const addUserFavorite = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = await User.findById(req.params.userId);
-    const propertyId = req.body.propertyId as string; // expect propertyId in body
+    const { userId } = req.params;
+    const { propertyId } = req.body;
+
+    const user = await User.findById(userId);
     const property = await Property.findById(propertyId);
 
     if (!user) {
@@ -314,13 +317,18 @@ export const addUserFavorite = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const isRepetitive = user.favorites?.some((item: any) => item.title === property.title);
-    if (isRepetitive) {
+    // Check if property already exists in favorites
+    const alreadyExists = user.favorites?.some(
+      (favId) => favId.toString() === propertyId
+    );
+
+    if (alreadyExists) {
       res.status(400).json({ msg: "Item is repetitive, denied!" });
       return;
     }
 
-    user.favorites?.push(property);
+    user.favorites?.push(property._id as Types.ObjectId);
+
     await user.save();
 
     res.status(201).json({

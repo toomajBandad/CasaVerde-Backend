@@ -15,7 +15,7 @@ export interface IProperty {
   owner: Types.ObjectId;            // reference to User
   contractCategory: Types.ObjectId; // reference to ContractCategory
   typeCategory: Types.ObjectId;     // reference to TypeCategory
-  image?: Record<string, any>;      // flexible object
+  image?: string;                   // image URL
   city: string;
   latlng?: any[];                   // e.g. [lat, lng]
   area: string;
@@ -86,7 +86,7 @@ const propertySchema: Schema<PropertyDocument> = new Schema(
       required: true,
     },
     image: {
-      type: Object,
+      type: String,
     },
     city: {
       type: String,
