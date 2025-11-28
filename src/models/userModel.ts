@@ -5,8 +5,8 @@ export interface IUser {
   username: string;
   email: string;
   password: string;
-  recentSearches?: Record<string, any>;
-  messages?: any[];
+  // recentSearches?: object[];
+  messages?: Types.ObjectId[];
   favorites?: Types.ObjectId[]; // array of Property IDs
   image?: string;
 }
@@ -35,21 +35,23 @@ const userSchema: Schema<UserDocument> = new Schema(
       required: true,
     },
 
-    recentSearches: {
-      type: Array,
-      default: [],
-    },
+    // recentSearches: {
+    //   type: Array,
+    //   default: [],
+    // },
 
-    messages: {
-      type: Array,
-      default: [],
-    },
+    messages: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Message",
+      },
+    ],
 
     favorites: [
       {
         type: Schema.Types.ObjectId,
         ref: "Property", // reference to Property model
-      }
+      },
     ],
 
     image: {
