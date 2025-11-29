@@ -7,9 +7,10 @@ import {
   updateUser,
   deleteUser,
   loginUser,
-  getUserFavorite,
+  logoutUser,
+  getUserFavorites,
   addUserFavorite,
-  deleteUserFavorite,
+  removeUserFavorite,
   changeAvatar,
   sendMail,
   contactUs,
@@ -27,14 +28,15 @@ router.delete("/:id", deleteUser);      // Delete user by ID
 
 // ---------- Auth ----------
 router.post("/auth/login", loginUser);  // User login
+router.post("/auth/logout", logoutUser);  // User logout
 
 // ---------- Profile ----------
 router.put("/:id/avatar", changeAvatar);// Update user avatar
 
 // ---------- Favorites ----------
-router.get("/:id/favorites", getUserFavorite);              // Get user's favorites
-router.post("/:id/favorites", addUserFavorite);             // Add to user's favorites
-router.delete("/:id/favorites/:propId", deleteUserFavorite);// Remove favorite by property ID
+router.get("/:userId/favorites", getUserFavorites);              // Get user's favorites
+router.post("/:userId/favorites", addUserFavorite);             // Add to user's favorites
+router.delete("/:userId/favorites/:propertyId", removeUserFavorite);// Remove favorite by property ID
 
 // ---------- Support ----------
 router.post("/support/sendMail", sendMail);   // Send support email

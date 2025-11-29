@@ -8,6 +8,8 @@ import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import * as brevo from "@getbrevo/brevo";
 import { Types } from "mongoose";
+import { welcomeEmail } from "../templates/WelcomeEmail";
+import { infoEmail } from "../templates/InfoEmail";
 
 dotenv.config();
 const secretKey = process.env.JWT_SECRET as string;
@@ -29,30 +31,79 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+// Login user
+export const loginUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username, password } = req.body;
 
-// Get current user from JWT
+    if (!username || !password) {
+      res.status(400).json({ msg: "Missing username or password" });
+      return;
+    }
+
+    const user = await User.findOne({ username });
+    if (!user) {
+      res.status(403).json({ msg: "User not found" });
+      return;
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      res.status(400).json({ msg: "Invalid password" });
+      return;
+    }
+
+    // Use unique ID in JWT payload
+    const token = jwt.sign({ id: user._id }, secretKey, { expiresIn: "1h" });
+
+    //save token in user broser cookies
+    res.cookie("token", token, {
+      httpOnly: true, // not accessible via JS
+      secure: false, // only over HTTPS
+      sameSite: "strict", // prevents CSRF
+      maxAge: 3600000, // 1 hour
+    });
+    res.json({ msg: "Login successful" });
+  } catch (error: any) {
+    res.status(500).json({ msg: error.message });
+  }
+};
+
+export const logoutUser = (req: Request, res: Response): void => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: false, // true in production with HTTPS
+    sameSite: "strict",
+  });
+  res.json({ msg: "Logout successful" });
+};
+
+// Get current user from JWT in cookies
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1]; // Bearer <token>
+    const token = req.cookies?.token; // read token from cookies
 
     if (!token) {
       res.status(401).json({ message: "Access token missing" });
       return;
     }
 
-    const decoded = jwt.verify(token, secretKey) as {
-      username: string;
-      email: string;
-    };
+    const decoded = jwt.verify(token, secretKey) as { id: string };
+    const user = await User.findById(decoded.id);
 
-    const user = await User.findOne({ username: decoded.username });
     if (!user) {
       res.status(404).json({ message: "User not found" });
       return;
     }
 
-    res.json({ message: "User identified correctly", user });
+    res.json({
+      message: "User identified correctly",
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
   } catch (err: any) {
     res.status(403).json({ message: "Invalid token" });
   }
@@ -196,186 +247,127 @@ export const deleteUser = async (
   }
 };
 
-// Login user
-export const loginUser = async (req: Request, res: Response): Promise<void> => {
+// Update user avatar by ID
+export const changeAvatar = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, password } = req.body as {
-      username: string;
-      password: string;
-    };
+    const { id } = req.params; // get user ID from URL
+    const { image } = req.body as { image: string };
 
-    if (!username || !password) {
-      res.status(400).json({ msg: "Missing username or password" });
+    if (!image) {
+      res.status(400).json({ msg: "Missing image", error: true });
       return;
     }
 
-    const user = await User.findOne({ username });
-    if (!user) {
-      res.status(403).json({ msg: "User not found" });
-      return;
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      res.status(400).json({ msg: "Invalid password" });
-      return;
-    }
-
-    // ⚠️ Security fix: do not include password in JWT payload
-    const token = jwt.sign(
-      { username: user.username, email: user.email },
-      secretKey,
-      { expiresIn: "1h" }
+    const user = await User.findByIdAndUpdate(
+      id,
+      { image },
+      { new: true, projection: { username: 1, image: 1 } }
     );
 
-    res.json({ msg: "Login successful", token, user });
+    if (!user) {
+      res.status(404).json({ msg: "User not found", error: true });
+      return;
+    }
+
+    res.json({ msg: "User avatar updated successfully", user });
   } catch (error: any) {
-    res.status(500).json({ msg: error.message });
+    res.status(500).json({ msg: error.message, error: true });
   }
 };
 
-// Change user avatar
-export const changeAvatar = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+
+//  Get all favorites
+export const getUserFavorites = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, image } = req.body as { username: string; image: string };
+    const { userId } = req.params;
 
-    if (!username || !image) {
-      res.status(400).json({ msg: "Missing username or image" });
-      return;
-    }
-
-    const user = await User.findOne({ username });
+    const user = await User.findById(userId).populate("favorites"); // populate property details
     if (!user) {
       res.status(404).json({ msg: "User not found" });
       return;
     }
 
-    user.image = image;
-    await user.save();
-
-    res.json({ msg: "User avatar updated successfully", user });
+    res.status(200).json({
+      msg: "Fetched favorites successfully",
+      favorites: user.favorites,
+    });
   } catch (error: any) {
+    console.error("getUserFavorites error:", error);
     res.status(500).json({ msg: error.message });
   }
 };
 
-// Get user favorites
-export const getUserFavorite = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const user = await User.findById(req.params.userId);
 
-    if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
-    }
-
-    res.json(user.favorites);
-  } catch (error: any) {
-    res.status(500).json({ msg: error.message });
-  }
-};
-
-// Add property to favorites
-export const addUserFavorite = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+//  Add to favorites
+export const addUserFavorite = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
     const { propertyId } = req.body;
 
-    const user = await User.findById(userId);
-    const property = await Property.findById(propertyId);
-
-    if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
-    }
-    if (!property) {
-      res.status(404).json({ message: "Property not found" });
+    // Validate existence
+    const propertyExists = await Property.exists({ _id: propertyId });
+    if (!propertyExists) {
+      res.status(404).json({ msg: "Property not found" });
       return;
     }
 
-    // Check if property already exists in favorites
-    const alreadyExists = user.favorites?.some(
-      (favId) => favId.toString() === propertyId
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { favorites: new Types.ObjectId(propertyId) } }, // prevents duplicates
+      { new: true }
     );
 
-    if (alreadyExists) {
-      res.status(400).json({ msg: "Item is repetitive, denied!" });
+    if (!updatedUser) {
+      res.status(404).json({ msg: "User not found" });
       return;
     }
-
-    user.favorites?.push(property._id as Types.ObjectId);
-
-    await user.save();
 
     res.status(201).json({
       msg: "Added to favorites successfully",
-      favorites: user.favorites,
+      favorites: updatedUser.favorites,
     });
   } catch (error: any) {
+    console.error("addUserFavorite error:", error);
     res.status(500).json({ msg: error.message });
   }
 };
 
-// Delete property from favorites
-export const deleteUserFavorite = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+
+//  Remove from favorites
+export const removeUserFavorite = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = await User.findById(req.params.userId);
-    const propertyId = req.body.propertyId as string; // expect propertyId in body
-    const property = await Property.findById(propertyId);
+    const { userId } = req.params;
+    const { propertyId } = req.params;
 
-    if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
-    }
-    if (!property) {
-      res.status(404).json({ message: "Property not found" });
-      return;
-    }
-
-    // ✅ Ensure favorites is always an array
-    if (!user.favorites) {
-      user.favorites = [];
-    }
-
-    const selectedItemIndex = user.favorites.findIndex(
-      (item: any) => item.title === property.title
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { favorites: new Types.ObjectId(propertyId) } }, // removes if exists
+      { new: true }
     );
 
-    if (selectedItemIndex === -1) {
-      res.status(404).json({ message: "Favorite not found" });
+    if (!updatedUser) {
+      res.status(404).json({ msg: "User not found" });
       return;
     }
-
-    user.favorites.splice(selectedItemIndex, 1);
-    await user.save();
 
     res.status(200).json({
       msg: "Removed from favorites successfully",
-      favorites: user.favorites,
+      favorites: updatedUser.favorites,
     });
   } catch (error: any) {
+    console.error("removeUserFavorite error:", error);
     res.status(500).json({ msg: error.message });
   }
 };
+
 
 // Send transactional email via Brevo
 export const sendMail = async (req: Request, res: Response): Promise<void> => {
   try {
+    type EmailType = "Welcome" | "Info" | "ResetPassword";
     const { userId, type, subject } = req.body as {
       userId: string;
-      type: string;
+      type: EmailType;
       subject: string;
     };
 
@@ -383,14 +375,17 @@ export const sendMail = async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ message: "Missing userId, type, or subject" });
       return;
     }
-
     const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ message: "User not found" });
       return;
     }
 
-    // ✅ Correct Brevo API setup
+    //  Brevo API setup
+    if (!process.env.BREVO_API_KEY || !process.env.BREVO_SENDER_EMAIL) {
+      throw new Error("Missing Brevo environment variables");
+    }
+
     const apiInstance = new brevo.TransactionalEmailsApi();
     apiInstance.setApiKey(
       brevo.TransactionalEmailsApiApiKeys.apiKey,
@@ -401,34 +396,26 @@ export const sendMail = async (req: Request, res: Response): Promise<void> => {
     sendSmtpEmail.subject = subject;
 
     if (type === "Welcome") {
-      sendSmtpEmail.htmlContent = `
-        <div style="font-family: Arial, sans-serif; background-color: #f4f4f7; padding: 30px; border-radius: 8px;">
-          <h1 style="color: #01796f;">Hello ${user.username} 👋</h1>
-          <p>Welcome aboard!</p>
-          <p>Thanks for signing up—your journey with us starts now, and we're excited to have you as part of our community.</p>
-          <ul>
-            <li>🔒 Member-only features</li>
-            <li>📢 News and updates</li>
-            <li>💬 Personalized support</li>
-          </ul>
-          <p>Just hit reply if you need anything. We're here for you!</p>
-          <p style="margin-top: 20px;">Cheers,<br><strong>The Team 🚀</strong></p>
-          <small style="color: #888;">You received this email because you signed up for our service.</small>
-        </div>
-      `;
+      sendSmtpEmail.htmlContent = welcomeEmail(user.username);
     } else {
-      sendSmtpEmail.htmlContent = `<p>Information from Casa Verde!</p>`;
+      sendSmtpEmail.htmlContent = infoEmail();
     }
 
-    sendSmtpEmail.sender = { name: "Casa Verde", email: "tbandad@gmail.com" };
+    sendSmtpEmail.sender = {
+      name: "Casa Verde",
+      email: process.env.BREVO_SENDER_EMAIL as string,
+    };
     sendSmtpEmail.to = [{ email: user.email, name: user.username }];
-    sendSmtpEmail.replyTo = { name: "Casa Verde", email: "tbandad@gmail.com" };
+    sendSmtpEmail.replyTo = {
+      name: "Casa Verde",
+      email: process.env.BREVO_SENDER_EMAIL as string,
+    };
 
     await apiInstance.sendTransacEmail(sendSmtpEmail);
-    res.send("Email sent successfully via Brevo API");
+    res.status(200).json({ msg: "Email sent successfully" });
   } catch (error: any) {
-    console.error(error);
-    res.status(500).send("Error sending email");
+    console.error("Brevo error:", error.response?.body || error);
+    res.status(500).json({ msg: "Error sending email" });
   }
 };
 

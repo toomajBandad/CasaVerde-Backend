@@ -16,14 +16,17 @@ import cityRoutes from "./routes/cityRoutes";
 import newsRoutes from "./routes/newsRoutes";
 import messageRoutes from "./routes/messageRoutes";
 import roomRoutes from "./routes/roomRoutes";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 4000;
 
+// Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // parse JSON bodies
+app.use(cookieParser()); // parse cookies from requests
 
 // MongoDB Connection
 mongoose
@@ -93,14 +96,20 @@ io.on("connection", (socket) => {
   console.log(`User ${socket.id} connected`);
 
   // Welcome message
-  socket.emit("message", buildMsg(ADMIN, "Welcome to your Chat! Select an item to continue"));
+  socket.emit(
+    "message",
+    buildMsg(ADMIN, "Welcome to your Chat! Select an item to continue")
+  );
 
   socket.on("enterRoom", ({ name, room }: { name: string; room: string }) => {
     const prevRoom = getUser(socket.id)?.room;
 
     if (prevRoom) {
       socket.leave(prevRoom);
-      io.to(prevRoom).emit("message", buildMsg(ADMIN, `${name} has left the room`));
+      io.to(prevRoom).emit(
+        "message",
+        buildMsg(ADMIN, `${name} has left the room`)
+      );
     }
 
     const user = activateUser(socket.id, name, room);
@@ -112,9 +121,17 @@ io.on("connection", (socket) => {
     socket.join(user.room);
     console.log("user joined to:", user.room);
 
-    socket.emit("message", buildMsg(ADMIN, `You have selected the chat. Now you can type your message!`));
+    socket.emit(
+      "message",
+      buildMsg(
+        ADMIN,
+        `You have selected the chat. Now you can type your message!`
+      )
+    );
 
-    socket.broadcast.to(user.room).emit("message", buildMsg(ADMIN, `${user.name} has joined the room`));
+    socket.broadcast
+      .to(user.room)
+      .emit("message", buildMsg(ADMIN, `${user.name} has joined the room`));
 
     io.to(user.room).emit("userList", { users: getUsersInRoom(user.room) });
 
@@ -126,7 +143,10 @@ io.on("connection", (socket) => {
     userLeavesApp(socket.id);
 
     if (user) {
-      io.to(user.room).emit("message", buildMsg(ADMIN, `${user.name} has left the room`));
+      io.to(user.room).emit(
+        "message",
+        buildMsg(ADMIN, `${user.name} has left the room`)
+      );
       io.to(user.room).emit("userList", { users: getUsersInRoom(user.room) });
       io.emit("roomList", { rooms: getAllActiveRooms() });
     }
