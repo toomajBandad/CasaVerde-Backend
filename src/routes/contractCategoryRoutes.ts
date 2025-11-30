@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import {
-  getContractCategorys,
+  getContractCategories,
   getContractCategoryById,
   createContractCategory,
   updateContractCategory,
@@ -9,7 +9,7 @@ import {
 
 const router: Router = express.Router();
 
-router.get("/", getContractCategorys);
+router.get("/", getContractCategories);
 router.get("/:id", getContractCategoryById);
 router.post("/", createContractCategory);
 router.put("/:id", updateContractCategory);

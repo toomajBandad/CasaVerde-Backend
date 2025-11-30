@@ -41,7 +41,7 @@ mongoose
 // API Routes
 app.use("/users", userRoutes);
 app.use("/properties", propertyRoutes);
-app.use("/contractCategory", contractCategoryRoutes);
+app.use("/contractCategories", contractCategoryRoutes);
 app.use("/typeCategory", typeCategoryRoutes);
 app.use("/cities", cityRoutes);
 app.use("/news", newsRoutes);
@@ -55,7 +55,7 @@ app.get("/", (req: Request, res: Response) => {
     endpoints: {
       users: "/users",
       properties: "/properties",
-      contractCategory: "/contractCategory",
+      contractCategories: "/contractCategories",
       typeCategory: "/typeCategory",
       cities: "/cities",
       news: "/news",
