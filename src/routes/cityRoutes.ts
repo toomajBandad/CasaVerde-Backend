@@ -11,8 +11,8 @@ import {
 
 const router: Router = express.Router();
 
-router.get("/all", getAllCity);
-router.get("/all/:id", getCityById);
+router.get("/", getAllCity);
+router.get("/:id", getCityById);
 router.get("/province/:proName", getAllCityByProvince);
 router.post("/", createCity);
 router.put("/:id", editCity);

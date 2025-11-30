@@ -5,7 +5,10 @@ import TypeCategory from "../models/typeCategoryModel";
 export const getTypeCategories = async (req: Request, res: Response): Promise<void> => {
   try {
     const typeCategories = await TypeCategory.find({});
-    res.json(typeCategories);
+    res.status(200).json({
+      msg: "Fetched type categories successfully",
+      typeCategories,
+    });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }
@@ -21,7 +24,10 @@ export const getTypeCategoryById = async (req: Request, res: Response): Promise<
       return;
     }
 
-    res.json(typeCategory);
+    res.status(200).json({
+      msg: "Fetched type category successfully",
+      typeCategory,
+    });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }
@@ -41,9 +47,13 @@ export const createTypeCategory = async (req: Request, res: Response): Promise<v
 
     res.status(201).json({
       msg: "TypeCategory created successfully",
-      id: newCategory._id,
+      typeCategory: newCategory,
     });
   } catch (error: any) {
+    if (error.code === 11000) {
+      res.status(400).json({ msg: "TypeCategory name must be unique" });
+      return;
+    }
     res.status(500).json({ msg: error.message });
   }
 };
@@ -51,16 +61,20 @@ export const createTypeCategory = async (req: Request, res: Response): Promise<v
 // Update type category
 export const updateTypeCategory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, desc } = req.body as { name: string; desc: string };
+    const { name, desc } = req.body as { name?: string; desc?: string };
 
-    if (!name || !desc) {
-      res.status(400).json({ msg: "Error: name or desc missing" });
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (desc) updateData.desc = desc;
+
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({ msg: "No valid fields provided for update" });
       return;
     }
 
     const typeCategory = await TypeCategory.findByIdAndUpdate(
       req.params.id,
-      { name, desc },
+      updateData,
       { new: true }
     );
 
@@ -69,8 +83,15 @@ export const updateTypeCategory = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    res.json({ msg: "TypeCategory updated successfully", typeCategory });
+    res.status(200).json({
+      msg: "TypeCategory updated successfully",
+      typeCategory,
+    });
   } catch (error: any) {
+    if (error.code === 11000) {
+      res.status(400).json({ msg: "TypeCategory name must be unique" });
+      return;
+    }
     res.status(500).json({ msg: error.message });
   }
 };
@@ -85,7 +106,10 @@ export const deleteTypeCategory = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    res.json({ msg: "TypeCategory deleted successfully" });
+    res.status(200).json({
+      msg: "TypeCategory deleted successfully",
+      typeCategory,
+    });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }

@@ -42,7 +42,7 @@ mongoose
 app.use("/users", userRoutes);
 app.use("/properties", propertyRoutes);
 app.use("/contractCategories", contractCategoryRoutes);
-app.use("/typeCategory", typeCategoryRoutes);
+app.use("/typeCategories", typeCategoryRoutes);
 app.use("/cities", cityRoutes);
 app.use("/news", newsRoutes);
 app.use("/message", messageRoutes);
@@ -56,7 +56,7 @@ app.get("/", (req: Request, res: Response) => {
       users: "/users",
       properties: "/properties",
       contractCategories: "/contractCategories",
-      typeCategory: "/typeCategory",
+      typeCategory: "/typeCategories",
       cities: "/cities",
       news: "/news",
       message: "/message",

@@ -16,18 +16,24 @@ const CitySchema: Schema<CityDocument> = new Schema(
     province: {
       type: String,
       required: true,
+      trim: true,
     },
     name: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
     location: {
-      type: Array,
+      type: [String], 
+      default: [],  
     },
   },
   { timestamps: true }
 );
+
+// Optional: compound index for province + name
+CitySchema.index({ province: 1, name: 1 }, { unique: true });
 
 // Create the model
 const City = mongoose.model<CityDocument>("City", CitySchema);

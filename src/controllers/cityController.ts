@@ -5,7 +5,10 @@ import City from "../models/cityModel";
 export const getAllCity = async (req: Request, res: Response): Promise<void> => {
   try {
     const cities = await City.find({});
-    res.json(cities);
+    res.status(200).json({
+      msg: "Fetched all cities successfully",
+      cities,
+    });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }
@@ -16,10 +19,13 @@ export const getCityById = async (req: Request, res: Response): Promise<void> =>
   try {
     const city = await City.findById(req.params.id);
     if (!city) {
-      res.status(404).json({ msg: "City not found!" });
+      res.status(404).json({ msg: "City not found" });
       return;
     }
-    res.json(city);
+    res.status(200).json({
+      msg: "Fetched city successfully",
+      city,
+    });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }
@@ -28,12 +34,15 @@ export const getCityById = async (req: Request, res: Response): Promise<void> =>
 // Get all cities by province
 export const getAllCityByProvince = async (req: Request, res: Response): Promise<void> => {
   try {
-    const citiesArr = await City.find({ province: req.params.proName });
-    if (!citiesArr.length) {
-      res.status(404).json({ msg: "No city found in this province!" });
+    const cities = await City.find({ province: req.params.proName });
+    if (!cities.length) {
+      res.status(404).json({ msg: "No cities found in this province" });
       return;
     }
-    res.status(200).json(citiesArr);
+    res.status(200).json({
+      msg: "Fetched cities by province successfully",
+      cities,
+    });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }
@@ -42,19 +51,24 @@ export const getAllCityByProvince = async (req: Request, res: Response): Promise
 // Create a new city
 export const createCity = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { province, name } = req.body;
+    const { province, name, location } = req.body;
 
     if (!province || !name) {
-      res.status(400).json({ msg: "Error with name or province" });
+      res.status(400).json({ msg: "Error: province and name are required" });
       return;
     }
 
-    const newCity = await City.create({ province, name });
+    const newCity = await City.create({ province, name, location });
+
     res.status(201).json({
-      msg: "New city created successfully",
+      msg: "City created successfully",
       city: newCity,
     });
   } catch (error: any) {
+    if (error.code === 11000) {
+      res.status(400).json({ msg: "City name must be unique" });
+      return;
+    }
     res.status(500).json({ msg: error.message });
   }
 };
@@ -62,26 +76,34 @@ export const createCity = async (req: Request, res: Response): Promise<void> => 
 // Edit city
 export const editCity = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { province, name } = req.body;
+    const { province, name, location } = req.body;
 
-    if (!province || !name) {
-      res.status(400).json({ msg: "Error with name or province" });
+    const updateData: any = {};
+    if (province) updateData.province = province;
+    if (name) updateData.name = name;
+    if (location) updateData.location = location;
+
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({ msg: "No valid fields provided for update" });
       return;
     }
 
-    const city = await City.findByIdAndUpdate(
-      req.params.id,
-      { province, name },
-      { new: true }
-    );
+    const city = await City.findByIdAndUpdate(req.params.id, updateData, { new: true });
 
     if (!city) {
-      res.status(404).json({ msg: "City not found!" });
+      res.status(404).json({ msg: "City not found" });
       return;
     }
 
-    res.status(201).json({ msg: "City updated successfully", city });
+    res.status(200).json({
+      msg: "City updated successfully",
+      city,
+    });
   } catch (error: any) {
+    if (error.code === 11000) {
+      res.status(400).json({ msg: "City name must be unique" });
+      return;
+    }
     res.status(500).json({ msg: error.message });
   }
 };
@@ -92,11 +114,14 @@ export const deleteCity = async (req: Request, res: Response): Promise<void> => 
     const city = await City.findByIdAndDelete(req.params.id);
 
     if (!city) {
-      res.status(404).json({ msg: "City not found!" });
+      res.status(404).json({ msg: "City not found" });
       return;
     }
 
-    res.status(200).json({ msg: "City deleted successfully" });
+    res.status(200).json({
+      msg: "City deleted successfully",
+      city,
+    });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }
@@ -108,11 +133,14 @@ export const searchCityByName = async (req: Request, res: Response): Promise<voi
     const city = await City.findOne({ name: req.params.name });
 
     if (!city) {
-      res.status(404).json({ msg: "City not found!" });
+      res.status(404).json({ msg: "City not found" });
       return;
     }
 
-    res.status(200).json({ msg: "City found successfully", city });
+    res.status(200).json({
+      msg: "City found successfully",
+      city,
+    });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }
