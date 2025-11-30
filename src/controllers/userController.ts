@@ -24,8 +24,16 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
     if (username) query.username = new RegExp(username as string, "i"); // case-insensitive search
     if (email) query.email = new RegExp(email as string, "i");
 
-    const users = await User.find(query);
-    res.json(users);
+    const users = await User.find(query)
+      .select("-password") // exclude password for security
+      .populate("favorites", "title price city") // optional: show property details
+      .populate("listings", "title price city"); // optional: show property details
+
+    res.status(200).json({
+      msg: "Fetched users successfully",
+      count: users.length,
+      users,
+    });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }
@@ -102,6 +110,8 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
         id: user._id,
         username: user.username,
         email: user.email,
+        role: user.role, // added
+        profile: user.profile, // added
       },
     });
   } catch (err: any) {
@@ -115,7 +125,10 @@ export const getUserById = async (
   res: Response
 ): Promise<void> => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id)
+      .select("-password") // exclude password
+      .populate("favorites", "title price city") // populate favorites with selected fields
+      .populate("listings", "title price city"); // populate listings with selected fields
 
     if (!user) {
       res.status(404).json({ msg: "User not found!" });
@@ -134,10 +147,16 @@ export const createUser = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { username, password, email } = req.body as {
+    const { username, password, email, role, profile } = req.body as {
       username: string;
       password: string;
       email: string;
+      role?: string;
+      profile?: {
+        image?: string;
+        bio?: string;
+        phone?: string;
+      };
     };
 
     if (!username || !password || !email) {
@@ -155,9 +174,16 @@ export const createUser = async (
       return;
     }
 
+    // Duplicate checks
     const emailDuplicate = await User.findOne({ email });
     if (emailDuplicate) {
       res.status(400).json({ msg: "This email is already registered" });
+      return;
+    }
+
+    const usernameDuplicate = await User.findOne({ username });
+    if (usernameDuplicate) {
+      res.status(400).json({ msg: "This username is already taken" });
       return;
     }
 
@@ -168,14 +194,16 @@ export const createUser = async (
       username,
       password: hashedPassword,
       email,
+      role: role || "user", // default role
+      profile: profile || {}, // optional profile object
+      favorites: [],
+      listings: [],
+      recentSearches: [],
     });
 
     // ⚠️ Security fix: Do not include password in JWT payload
     const token = jwt.sign(
-      {
-        username: newUser.username,
-        email: newUser.email,
-      },
+      { id: newUser._id, email: newUser.email },
       secretKey,
       { expiresIn: "1h" }
     );
@@ -184,7 +212,13 @@ export const createUser = async (
       access_token: token,
       token_type: "Bearer",
       msg: "User created successfully",
-      user: newUser,
+      user: {
+        id: newUser._id,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        profile: newUser.profile,
+      },
     });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
@@ -197,32 +231,40 @@ export const updateUser = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { username, email, password } = req.body as {
-      username: string;
-      email: string;
-      password: string;
+    const { username, email, password, role, profile } = req.body as {
+      username?: string;
+      email?: string;
+      password?: string;
+      role?: string;
+      profile?: {
+        image?: string;
+        bio?: string;
+        phone?: string;
+      };
     };
 
-    if (!username || !password || !email) {
-      res.status(400).json({ msg: "Missing username, password, or email" });
-      return;
+    // Build update object dynamically
+    const updateData: any = {};
+    if (username) updateData.username = username;
+    if (email) updateData.email = email;
+    if (role) updateData.role = role;
+    if (profile) updateData.profile = profile;
+
+    if (password) {
+      const saltRounds = 10;
+      updateData.password = await bcrypt.hash(password, saltRounds);
     }
 
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { username, password: hashedPassword, email },
-      { new: true }
-    );
+    const user = await User.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+    }).select("-password"); // exclude password
 
     if (!user) {
       res.status(404).json({ msg: "User not found" });
       return;
     }
 
-    res.status(201).json({ msg: "User updated successfully", user });
+    res.status(200).json({ msg: "User updated successfully", user });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }
@@ -234,7 +276,9 @@ export const deleteUser = async (
   res: Response
 ): Promise<void> => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
+    const user = await User.findByIdAndDelete(req.params.id).select(
+      "-password"
+    ); // exclude password just in case
 
     if (!user) {
       res.status(404).json({ msg: "User not found" });
@@ -248,7 +292,10 @@ export const deleteUser = async (
 };
 
 // Update user avatar by ID
-export const changeAvatar = async (req: Request, res: Response): Promise<void> => {
+export const changeAvatar = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { id } = req.params; // get user ID from URL
     const { image } = req.body as { image: string };
@@ -260,8 +307,8 @@ export const changeAvatar = async (req: Request, res: Response): Promise<void> =
 
     const user = await User.findByIdAndUpdate(
       id,
-      { image },
-      { new: true, projection: { username: 1, image: 1 } }
+      { "profile.image": image }, // update nested profile field
+      { new: true, projection: { username: 1, "profile.image": 1 } }
     );
 
     if (!user) {
@@ -275,9 +322,11 @@ export const changeAvatar = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-
 //  Get all favorites
-export const getUserFavorites = async (req: Request, res: Response): Promise<void> => {
+export const getUserFavorites = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { userId } = req.params;
 
@@ -297,9 +346,11 @@ export const getUserFavorites = async (req: Request, res: Response): Promise<voi
   }
 };
 
-
 //  Add to favorites
-export const addUserFavorite = async (req: Request, res: Response): Promise<void> => {
+export const addUserFavorite = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { userId } = req.params;
     const { propertyId } = req.body;
@@ -332,12 +383,13 @@ export const addUserFavorite = async (req: Request, res: Response): Promise<void
   }
 };
 
-
 //  Remove from favorites
-export const removeUserFavorite = async (req: Request, res: Response): Promise<void> => {
+export const removeUserFavorite = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { userId } = req.params;
-    const { propertyId } = req.params;
+    const { userId, propertyId } = req.params; // fixed: destructure both together
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
@@ -359,7 +411,6 @@ export const removeUserFavorite = async (req: Request, res: Response): Promise<v
     res.status(500).json({ msg: error.message });
   }
 };
-
 
 // Send transactional email via Brevo
 export const sendMail = async (req: Request, res: Response): Promise<void> => {
@@ -436,7 +487,16 @@ export const contactUs = async (req: Request, res: Response): Promise<void> => {
 
     const newContact = await Contact.create({ name, family, message, email });
 
-    res.json({ msg: "Your message delivered successfully", newContact });
+    res.status(201).json({
+      msg: "Your message delivered successfully",
+      contact: {
+        id: newContact._id,
+        name: newContact.name,
+        family: newContact.family,
+        email: newContact.email,
+        message: newContact.message,
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }

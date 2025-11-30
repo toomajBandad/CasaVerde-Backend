@@ -5,20 +5,20 @@ export interface IProperty {
   title: string;
   desc: string;
   location: string;
-  price: string;
+  price: number;
   duration: string;
-  bedrooms: string;
-  bathrooms: string;
-  pets: string;
-  couples: string;
-  minors: string;
+  bedrooms: number;
+  bathrooms: number;
+  pets: boolean;
+  couples: boolean;
+  minors: boolean;
   owner: Types.ObjectId;            // reference to User
   contractCategory: Types.ObjectId; // reference to ContractCategory
   typeCategory: Types.ObjectId;     // reference to TypeCategory
   image?: string;                   // image URL
   city: string;
-  latlng?: any[];                   // e.g. [lat, lng]
-  area: string;
+  latlng?: number[];                // e.g. [lat, lng]
+  area: number;
 }
 
 // Mongoose document type
@@ -35,39 +35,40 @@ const propertySchema: Schema<PropertyDocument> = new Schema(
     desc: {
       type: String,
       required: true,
-      unique: true,
     },
     location: {
       type: String,
       required: true,
-      unique: true,
     },
     price: {
-      type: String,
+      type: Number,
       required: true,
+      min: 1, // must be > 0
     },
     duration: {
       type: String,
       required: true,
     },
     bedrooms: {
-      type: String,
+      type: Number,
       required: true,
+      min: 0,
     },
     bathrooms: {
-      type: String,
+      type: Number,
       required: true,
+      min: 1, // must have at least 1 bathroom
     },
     pets: {
-      type: String,
+      type: Boolean,
       required: true,
     },
     couples: {
-      type: String,
+      type: Boolean,
       required: true,
     },
     minors: {
-      type: String,
+      type: Boolean,
       required: true,
     },
     owner: {
@@ -93,11 +94,12 @@ const propertySchema: Schema<PropertyDocument> = new Schema(
       required: true,
     },
     latlng: {
-      type: Array,
+      type: [Number], // array of numbers
     },
     area: {
-      type: String,
+      type: Number,
       required: true,
+      min: 1,
     },
   },
   { timestamps: true }

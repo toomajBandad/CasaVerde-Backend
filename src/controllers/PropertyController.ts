@@ -2,14 +2,39 @@ import { Request, Response } from "express";
 import Property from "../models/propertyModel";
 import ContractCategory from "../models/contractCategoryModel";
 import TypeCategory from "../models/typeCategoryModel";
+import mongoose from "mongoose";
 
 
 // Get all properties
 export const getProperties = async (req: Request, res: Response): Promise<void> => {
   try {
-    const properties = await Property.find({})
+    const { city, priceMin, priceMax, contractCategory, typeCategory } = req.query;
+
+    const filter: any = {};
+
+    if (city) {
+      // Case-insensitive search for city
+      filter.city = new RegExp(city as string, "i");
+    }
+
+    if (contractCategory) filter.contractCategory = contractCategory;
+    if (typeCategory) filter.typeCategory = typeCategory;
+
+    if (priceMin || priceMax) {
+      filter.price = {};
+      if (priceMin) filter.price.$gte = Number(priceMin);
+      if (priceMax) filter.price.$lte = Number(priceMax);
+    }
+
+    const properties = await Property.find(filter)
       .populate("contractCategory")
       .populate("typeCategory");
+
+    if (!properties || properties.length === 0) {
+      res.status(404).json({ msg: "No properties found" });
+      return;
+    }
+
     res.json(properties);
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
@@ -19,19 +44,28 @@ export const getProperties = async (req: Request, res: Response): Promise<void> 
 // Get property by ID
 export const getPropertyById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const property = await Property.findById(req.params.id)
+    const id: string = req.params.id as string; // force it to be string
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ msg: "Invalid property ID", error: true });
+      return;
+    }
+
+    const property = await Property.findById(id)
       .populate("contractCategory")
       .populate("typeCategory");
 
     if (!property) {
-      res.status(404).json({ msg: "Property not found" });
+      res.status(404).json({ msg: "Property not found", error: true });
       return;
     }
+
     res.json(property);
   } catch (error: any) {
-    res.status(500).json({ msg: error.message });
+    res.status(500).json({ msg: error.message, error: true });
   }
 };
+
 
 // Create property
 export const createProperty = async (req: Request, res: Response): Promise<void> => {
@@ -44,8 +78,8 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
     } = req.body;
 
     if (!title || !desc || !location || !price || !duration ||
-        !bedrooms || !bathrooms || !pets || !couples || !minors ||
-        !owner || !contractCategory || !typeCategory || !city || !image || !area) {
+        bedrooms==null || !bathrooms || pets==null || couples==null || minors==null ||
+        !owner || !contractCategory || !typeCategory || !city || !area) {
       res.status(400).json({ msg: "One or more required fields missing" });
       return;
     }
@@ -86,13 +120,36 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
       desc, minors, duration, area,
     } = req.body;
 
-    if (!title || !price || !city || !location || !contractCategory ||
-        !bathrooms || !typeCategory || !bedrooms || !pets || !couples ||
-        !desc || !minors || !duration || !area) {
+    // Presence check (null/undefined only)
+    if (
+      title == null || price == null || city == null || location == null || contractCategory == null ||
+      bathrooms == null || typeCategory == null || bedrooms == null || pets == null || couples == null ||
+      desc == null || minors == null || duration == null || area == null
+    ) {
       res.status(400).json({ msg: "One or more required fields missing" });
       return;
     }
 
+    // Domain rules
+    const priceNum = Number(price);
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      res.status(400).json({ msg: "Price must be greater than 0" });
+      return;
+    }
+
+    const bathroomsNum = Number(bathrooms);
+    if (!Number.isFinite(bathroomsNum) || bathroomsNum <= 0) {
+      res.status(400).json({ msg: "Bathrooms must be at least 1" });
+      return;
+    }
+
+    const bedroomsNum = Number(bedrooms);
+    if (!Number.isFinite(bedroomsNum) || bedroomsNum < 0) {
+      res.status(400).json({ msg: "Bedrooms must be 0 or greater" });
+      return;
+    }
+
+    // Validate categories
     const thisContractCategory = await ContractCategory.findOne({ name: contractCategory });
     if (!thisContractCategory) {
       res.status(400).json({ msg: "Contract category did not match" });
@@ -105,11 +162,22 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    // Build update data
     const updateData = {
-      title, price, city, location,
-      contractCategory: thisContractCategory,
-      bathrooms, typeCategory: thisTypeCategory,
-      bedrooms, pets, couples, desc, minors, duration, area,
+      title,
+      price: priceNum,
+      city,
+      location,
+      contractCategory: thisContractCategory._id,
+      bathrooms: bathroomsNum,
+      typeCategory: thisTypeCategory._id,
+      bedrooms: bedroomsNum,
+      pets,
+      couples,
+      desc,
+      minors,
+      duration,
+      area,
     };
 
     const property = await Property.findByIdAndUpdate(req.params.id, updateData, { new: true })
@@ -120,7 +188,7 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    res.status(201).json({ msg: "Property updated successfully", property });
+    res.status(200).json({ msg: "Property updated successfully", property });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }

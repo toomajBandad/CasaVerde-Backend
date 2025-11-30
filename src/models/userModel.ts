@@ -5,10 +5,16 @@ export interface IUser {
   username: string;
   email: string;
   password: string;
-  // recentSearches?: object[];
+  role: "user" | "owner" | "admin"; // controls permissions
+  listings?: Types.ObjectId[];      // properties posted by the user
+  favorites?: Types.ObjectId[];     // saved properties
+  recentSearches?: object[];        // personalized recommendations
   messages?: Types.ObjectId[];
-  favorites?: Types.ObjectId[]; // array of Property IDs
-  image?: string;
+  profile?: {
+    image?: string;
+    bio?: string;
+    phone?: string;
+  };
 }
 
 // Mongoose document type
@@ -30,15 +36,32 @@ const userSchema: Schema<UserDocument> = new Schema(
       unique: true,
       match: /.+\@.+\..+/,
     },
-    password: {
+    password: { type: String, required: true },
+
+    role: {
       type: String,
-      required: true,
+      enum: ["user", "owner", "admin"],
+      default: "user",
     },
 
-    // recentSearches: {
-    //   type: Array,
-    //   default: [],
-    // },
+    listings: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Property",
+      },
+    ],
+
+    favorites: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Property",
+      },
+    ],
+
+    recentSearches: {
+      type: Array,
+      default: [],
+    },
 
     messages: [
       {
@@ -47,16 +70,10 @@ const userSchema: Schema<UserDocument> = new Schema(
       },
     ],
 
-    favorites: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Property", // reference to Property model
-      },
-    ],
-
-    image: {
-      type: String,
-      default: "",
+    profile: {
+      image: { type: String, default: "" },
+      bio: { type: String, maxlength: 200 },
+      phone: { type: String },
     },
   },
   { timestamps: true }
