@@ -12,7 +12,7 @@ export const getAllNews = async (req: Request, res: Response): Promise<void> => 
 };
 
 // Get all unique news categories
-export const getAllnewsCat = async (req: Request, res: Response): Promise<void> => {
+export const getAllNewsCat = async (req: Request, res: Response): Promise<void> => {
   try {
     const newses = await News.find({});
     const newsCats = newses.map((item) => item.category);
@@ -55,17 +55,22 @@ export const getAllNewsByCategory = async (req: Request, res: Response): Promise
 // Create a new news entry
 export const createNews = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { category, mainTitle, items } = req.body;
+    const { title, subtitle, teaser, content, category, coverImage, author, tags } = req.body;
 
-    if (!category || !mainTitle || !items) {
-      res.status(400).json({ msg: "Error with items, mainTitle or category" });
+    if (!title || !content || !category) {
+      res.status(400).json({ msg: "Missing required fields: title, content, or category" });
       return;
     }
 
     const newNews = await News.create({
+      title,
+      subtitle,
+      teaser,
+      content,
       category,
-      mainTitle,
-      items,
+      coverImage,
+      author,
+      tags,
     });
 
     res.status(201).json({
@@ -80,16 +85,16 @@ export const createNews = async (req: Request, res: Response): Promise<void> => 
 // Edit news
 export const editNews = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { category, mainTitle, items } = req.body;
+    const { title, subtitle, teaser, content, category, coverImage, author, tags } = req.body;
 
-    if (!category || !items || !mainTitle) {
-      res.status(400).json({ msg: "Error with items, mainTitle or category" });
+    if (!title || !content || !category) {
+      res.status(400).json({ msg: "Missing required fields: title, content, or category" });
       return;
     }
 
     const news = await News.findByIdAndUpdate(
       req.params.id,
-      { category, mainTitle, items },
+      { title, subtitle, teaser, content, category, coverImage, author, tags },
       { new: true }
     );
 
@@ -98,7 +103,7 @@ export const editNews = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    res.status(201).json({ msg: "News updated successfully", news });
+    res.status(200).json({ msg: "News updated successfully", news });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }

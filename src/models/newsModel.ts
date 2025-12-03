@@ -1,18 +1,15 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-// Define the TypeScript interface for News items
-export interface INewsItem {
-  title: string;
-  desc: string;
-  img?: string;
-  type?: Record<string, any>; // flexible object
-}
-
-// Define the TypeScript interface for News documents
+// Define the interface for your News document
 export interface INews {
-  category: string;
-  mainTitle: string;
-  items: INewsItem[];
+  title: string;           // Main headline
+  subtitle?: string;       // Secondary line
+  teaser?: string;         // Short preview text
+  content: string;         // Full article body
+  category: string;        // e.g. "Business", "Events"
+  coverImage?: string;     // Thumbnail/banner image URL
+  author?: string;         // Author name
+  tags?: string[];         // Keywords for search
 }
 
 // Mongoose document type
@@ -21,38 +18,19 @@ export type NewsDocument = INews & Document;
 // Define the schema
 const NewsSchema: Schema<NewsDocument> = new Schema(
   {
-    category: {
-      type: String,
-      required: true,
-    },
-    mainTitle: {
-      type: String,
-      required: true,
-    },
-    items: [
-      {
-        title: {
-          type: String,
-          unique: true,
-        },
-        desc: {
-          type: String,
-          unique: true,
-        },
-        img: {
-          type: String,
-        },
-        type: {
-          type: Object,
-        },
-      },
-    ],
+    title: { type: String, required: true },
+    subtitle: { type: String },
+    teaser: { type: String },
+    content: { type: String, required: true },
+    category: { type: String, required: true },
+    coverImage: { type: String },
+    author: { type: String },
+    tags: { type: [String] },
   },
-  { timestamps: true }
+  { timestamps: true } // adds createdAt and updatedAt automatically
 );
 
 // Create the model
 const News = mongoose.model<NewsDocument>("News", NewsSchema);
 
-// Export it properly
 export default News;
