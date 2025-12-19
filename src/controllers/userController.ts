@@ -51,27 +51,26 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
     const user = await User.findOne({ username });
     if (!user) {
-      res.status(403).json({ msg: "User not found" });
+      res.status(404).json({ msg: "User not found" });
       return;
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      res.status(400).json({ msg: "Invalid password" });
+      res.status(401).json({ msg: "Invalid credentials" });
       return;
     }
 
-    // Use unique ID in JWT payload
-    const token = jwt.sign({ id: user._id }, secretKey, { expiresIn: "1h" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "1h" });
 
-    //save token in user broser cookies
     res.cookie("token", token, {
-      httpOnly: true, // not accessible via JS
-      secure: false, // only over HTTPS
-      sameSite: "strict", // prevents CSRF
-      maxAge: 3600000, // 1 hour
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 3600000,
     });
-    res.json({ msg: "Login successful" });
+
+    res.json({ msg: "Login successful", user: { id: user._id, username: user.username } });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }

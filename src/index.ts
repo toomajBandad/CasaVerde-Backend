@@ -4,9 +4,6 @@ import dotenv from "dotenv";
 import cors from "cors";
 import { Server } from "socket.io";
 
-import User from "./models/userModel";
-import Property from "./models/propertyModel";
-
 // Routes
 import userRoutes from "./routes/userRoutes";
 import propertyRoutes from "./routes/propertyRoutes";
@@ -24,7 +21,13 @@ const app = express();
 const port = process.env.PORT || 4000;
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL, // frontend URL (Vite dev server)
+    credentials: true, // allow cookies to be sent
+  })
+);
+
 app.use(express.json()); // parse JSON bodies
 app.use(cookieParser()); // parse cookies from requests
 
