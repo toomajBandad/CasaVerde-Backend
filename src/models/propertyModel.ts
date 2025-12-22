@@ -6,7 +6,7 @@ export interface IProperty {
   desc: string;
   location: string;
   price: number;
-  duration: string;
+  duration: number;
   bedrooms: number;
   bathrooms: number;
   pets: boolean;
@@ -46,7 +46,7 @@ const propertySchema: Schema<PropertyDocument> = new Schema(
       min: 1, // must be > 0
     },
     duration: {
-      type: String,
+      type: Number,
       required: true,
     },
     bedrooms: {

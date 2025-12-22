@@ -39,6 +39,8 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+
+
 // Login user
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -61,14 +63,23 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "1h" });
+    const accessToken = jwt.sign({ id: user._id }, process.env.JWT_Access_SECRET!, { expiresIn: "1m" });
+    const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET!, { expiresIn: "7d" });
 
-    res.cookie("token", token, {
+    res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 3600000,
+      maxAge: 60 * 1000, // 1 hour
     });
+    
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    
 
     res.json({ msg: "Login successful", user: { id: user._id, username: user.username } });
   } catch (error: any) {
@@ -88,15 +99,27 @@ export const logoutUser = (req: Request, res: Response): void => {
 // Get current user from JWT in cookies
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
-    const token = req.cookies?.token; // read token from cookies
+    const token = req.cookies?.accessToken;
 
     if (!token) {
       res.status(401).json({ message: "Access token missing" });
       return;
     }
 
-    const decoded = jwt.verify(token, secretKey) as { id: string };
-    const user = await User.findById(decoded.id);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_Access_SECRET!) as { id: string };
+    } catch {
+      res.status(401).json({ message: "Invalid or expired token" });
+      return;
+    }
+
+    // ⭐ Populate favorites, properties, messages
+    const user = await User.findById(decoded.id)
+      .populate("favorites")   // full property objects
+      .populate("listings")  // full property objects
+      .populate("messages")    // full message objects
+      .exec();
 
     if (!user) {
       res.status(404).json({ message: "User not found" });
@@ -109,12 +132,46 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
         id: user._id,
         username: user.username,
         email: user.email,
-        role: user.role, // added
-        profile: user.profile, // added
+        role: user.role,
+        profile: user.profile,
+
+        // ⭐ Now sending full objects
+        favorites: user.favorites,
+        listings: user.listings,
+        messages: user.messages,
       },
     });
   } catch (err: any) {
-    res.status(403).json({ message: "Invalid token" });
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const refreshToken = (req: Request, res: Response): void => {
+  const token = req.cookies?.refreshToken;
+  if (!token) {
+    res.status(401).json({ msg: "Refresh token missing" });
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as { id: string };
+
+    const newAccessToken = jwt.sign(
+      { id: decoded.id },
+      process.env.JWT_Access_SECRET!,
+      { expiresIn: "15m" }
+    );
+
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.json({ msg: "Access token refreshed" });
+  } catch {
+    res.status(403).json({ msg: "Invalid refresh token" });
   }
 };
 

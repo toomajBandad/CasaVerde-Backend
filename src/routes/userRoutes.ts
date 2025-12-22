@@ -8,6 +8,7 @@ import {
   deleteUser,
   loginUser,
   logoutUser,
+  refreshToken,
   getUserFavorites,
   addUserFavorite,
   removeUserFavorite,
@@ -29,6 +30,7 @@ router.delete("/:id", deleteUser);      // Delete user by ID
 // ---------- Auth ----------
 router.post("/auth/login", loginUser);  // User login
 router.post("/auth/logout", logoutUser);  // User logout
+router.post("/auth/refresh", refreshToken);  // Refresh access token
 
 // ---------- Profile ----------
 router.put("/:id/avatar", changeAvatar);// Update user avatar

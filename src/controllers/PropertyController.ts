@@ -77,13 +77,19 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       city, image, latlng, area,
     } = req.body;
 
-    if (!title || !desc || !location || !price || !duration ||
-        bedrooms==null || !bathrooms || pets==null || couples==null || minors==null ||
-        !owner || !contractCategory || !typeCategory || !city || !area) {
+    // ✅ Validation aligned with schema
+    if (
+      !title || !desc || !location || !price || !duration ||
+      bedrooms == null || bathrooms == null ||
+      pets == null || couples == null || minors == null ||
+      !owner || !contractCategory || !typeCategory ||
+      !city || !area
+    ) {
       res.status(400).json({ msg: "One or more required fields missing" });
       return;
     }
 
+    // ✅ Lookup categories
     const thisContractCategory = await ContractCategory.findOne({ name: contractCategory });
     if (!thisContractCategory) {
       res.status(400).json({ msg: "Contract category did not match" });
@@ -96,18 +102,21 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    // ✅ Create property with ObjectId references
     const newProperty = await Property.create({
       title, desc, location, price, duration,
       bedrooms, bathrooms, pets, couples, minors,
-      owner: owner || null,
-      contractCategory: thisContractCategory,
-      typeCategory: thisTypeCategory,
+      owner,
+      contractCategory: thisContractCategory._id,
+      typeCategory: thisTypeCategory._id,
       city, image, latlng, area,
     });
 
     res.status(201).json({ msg: "Property successfully created", id: newProperty._id });
+
   } catch (error: any) {
-    res.status(500).json({ msg: error.message });
+    console.error(error);
+    res.status(500).json({ msg: "Internal server error" });
   }
 };
 
