@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Property from "../models/propertyModel";
+import User from "../models/userModel";
 import ContractCategory from "../models/contractCategoryModel";
 import TypeCategory from "../models/typeCategoryModel";
 import mongoose from "mongoose";
@@ -110,6 +111,10 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       contractCategory: thisContractCategory._id,
       typeCategory: thisTypeCategory._id,
       city, image, latlng, area,
+    });
+
+    await User.findByIdAndUpdate(owner, {
+      $push: { listings: newProperty._id },
     });
 
     res.status(201).json({ msg: "Property successfully created", id: newProperty._id });
