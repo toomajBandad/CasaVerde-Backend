@@ -5,11 +5,14 @@ import ContractCategory from "../models/contractCategoryModel";
 import TypeCategory from "../models/typeCategoryModel";
 import mongoose from "mongoose";
 
-
 // Get all properties
-export const getProperties = async (req: Request, res: Response): Promise<void> => {
+export const getProperties = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { city, priceMin, priceMax, contractCategory, typeCategory } = req.query;
+    const { city, priceMin, priceMax, contractCategory, typeCategory } =
+      req.query;
 
     const filter: any = {};
 
@@ -43,7 +46,10 @@ export const getProperties = async (req: Request, res: Response): Promise<void> 
 };
 
 // Get property by ID
-export const getPropertyById = async (req: Request, res: Response): Promise<void> => {
+export const getPropertyById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const id: string = req.params.id as string; // force it to be string
 
@@ -67,31 +73,58 @@ export const getPropertyById = async (req: Request, res: Response): Promise<void
   }
 };
 
-
 // Create property
-export const createProperty = async (req: Request, res: Response): Promise<void> => {
+export const createProperty = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const {
-      title, desc, location, price, duration,
-      bedrooms, bathrooms, pets, couples, minors,
-      owner, contractCategory, typeCategory,
-      city, image, latlng, area,
+      title,
+      desc,
+      location,
+      price,
+      duration,
+      bedrooms,
+      bathrooms,
+      pets,
+      couples,
+      minors,
+      owner,
+      contractCategory,
+      typeCategory,
+      city,
+      image,
+      latlng,
+      area,
     } = req.body;
 
     // ✅ Validation aligned with schema
     if (
-      !title || !desc || !location || !price || !duration ||
-      bedrooms == null || bathrooms == null ||
-      pets == null || couples == null || minors == null ||
-      !owner || !contractCategory || !typeCategory ||
-      !city || !area
+      !title ||
+      !desc ||
+      !location ||
+      !price ||
+      !duration ||
+      bedrooms == null ||
+      bathrooms == null ||
+      pets == null ||
+      couples == null ||
+      minors == null ||
+      !owner ||
+      !contractCategory ||
+      !typeCategory ||
+      !city ||
+      !area
     ) {
       res.status(400).json({ msg: "One or more required fields missing" });
       return;
     }
 
     // ✅ Lookup categories
-    const thisContractCategory = await ContractCategory.findOne({ name: contractCategory });
+    const thisContractCategory = await ContractCategory.findOne({
+      name: contractCategory,
+    });
     if (!thisContractCategory) {
       res.status(400).json({ msg: "Contract category did not match" });
       return;
@@ -105,20 +138,32 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
 
     // ✅ Create property with ObjectId references
     const newProperty = await Property.create({
-      title, desc, location, price, duration,
-      bedrooms, bathrooms, pets, couples, minors,
+      title,
+      desc,
+      location,
+      price,
+      duration,
+      bedrooms,
+      bathrooms,
+      pets,
+      couples,
+      minors,
       owner,
       contractCategory: thisContractCategory._id,
       typeCategory: thisTypeCategory._id,
-      city, image, latlng, area,
+      city,
+      image,
+      latlng,
+      area,
     });
 
     await User.findByIdAndUpdate(owner, {
       $push: { listings: newProperty._id },
     });
 
-    res.status(201).json({ msg: "Property successfully created", id: newProperty._id });
-
+    res
+      .status(201)
+      .json({ msg: "Property successfully created", id: newProperty._id });
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ msg: "Internal server error" });
@@ -126,19 +171,44 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
 };
 
 // Update property
-export const updateProperty = async (req: Request, res: Response): Promise<void> => {
+export const updateProperty = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const {
-      title, price, city, location, contractCategory,
-      bathrooms, typeCategory, bedrooms, pets, couples,
-      desc, minors, duration, area,
+      title,
+      price,
+      city,
+      location,
+      contractCategory,
+      bathrooms,
+      typeCategory,
+      bedrooms,
+      pets,
+      couples,
+      desc,
+      minors,
+      duration,
+      area,
     } = req.body;
 
     // Presence check (null/undefined only)
     if (
-      title == null || price == null || city == null || location == null || contractCategory == null ||
-      bathrooms == null || typeCategory == null || bedrooms == null || pets == null || couples == null ||
-      desc == null || minors == null || duration == null || area == null
+      title == null ||
+      price == null ||
+      city == null ||
+      location == null ||
+      contractCategory == null ||
+      bathrooms == null ||
+      typeCategory == null ||
+      bedrooms == null ||
+      pets == null ||
+      couples == null ||
+      desc == null ||
+      minors == null ||
+      duration == null ||
+      area == null
     ) {
       res.status(400).json({ msg: "One or more required fields missing" });
       return;
@@ -164,7 +234,9 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
     }
 
     // Validate categories
-    const thisContractCategory = await ContractCategory.findOne({ name: contractCategory });
+    const thisContractCategory = await ContractCategory.findOne({
+      name: contractCategory,
+    });
     if (!thisContractCategory) {
       res.status(400).json({ msg: "Contract category did not match" });
       return;
@@ -194,8 +266,11 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
       area,
     };
 
-    const property = await Property.findByIdAndUpdate(req.params.id, updateData, { new: true })
-      .populate("owner", "id");
+    const property = await Property.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    ).populate("owner", "id");
 
     if (!property) {
       res.status(404).json({ msg: "Property not found" });
@@ -209,7 +284,10 @@ export const updateProperty = async (req: Request, res: Response): Promise<void>
 };
 
 // Delete property
-export const deleteProperty = async (req: Request, res: Response): Promise<void> => {
+export const deleteProperty = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const property = await Property.findByIdAndDelete(req.params.id);
     if (!property) {
@@ -223,7 +301,10 @@ export const deleteProperty = async (req: Request, res: Response): Promise<void>
 };
 
 // Assign owner
-export const assignOwner = async (req: Request, res: Response): Promise<void> => {
+export const assignOwner = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { ownerId } = req.body;
     if (!ownerId) {
@@ -232,7 +313,9 @@ export const assignOwner = async (req: Request, res: Response): Promise<void> =>
     }
 
     const property = await Property.findByIdAndUpdate(
-      req.params.id, { owner: ownerId }, { new: true }
+      req.params.id,
+      { owner: ownerId },
+      { new: true }
     ).populate("owner", "id");
 
     if (!property) {
@@ -247,7 +330,10 @@ export const assignOwner = async (req: Request, res: Response): Promise<void> =>
 };
 
 // Get properties by owner
-export const getPropertiesByOwner = async (req: Request, res: Response): Promise<void> => {
+export const getPropertiesByOwner = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const ownerId = req.params.ownerId;
     const properties = await Property.find({ owner: ownerId })
@@ -261,7 +347,10 @@ export const getPropertiesByOwner = async (req: Request, res: Response): Promise
 };
 
 // Get properties by city
-export const getPropertiesByCity = async (req: Request, res: Response): Promise<void> => {
+export const getPropertiesByCity = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const city = req.params.cityName;
     const properties = await Property.find({ city })
@@ -273,8 +362,76 @@ export const getPropertiesByCity = async (req: Request, res: Response): Promise<
   }
 };
 
+export const getPropertiesSearch = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const city = req.query.city as string;
+    const type = req.query.type as string;
+    const contract = req.query.contract as string;
+
+    const priceMin = Number(req.query.priceMin);
+    const priceMax = Number(req.query.priceMax);
+
+    const areaMin = Number(req.query.areaMin);
+    const areaMax = Number(req.query.areaMax);
+
+    const rooms = Number(req.query.rooms);
+
+    // Required filters
+    if (!city || !type || !contract) {
+      res.status(400).json({ msg: "Missing required query parameters" });
+      return;
+    }
+
+    // Find category IDs by name
+    const typeCategory = await TypeCategory.findOne({ name: type });
+    const contractCategory = await ContractCategory.findOne({ name: contract });
+
+    if (!typeCategory || !contractCategory) {
+      res.status(400).json({ msg: "Invalid type or contract category" });
+      return;
+    }
+
+    // Build MongoDB query
+    const query: any = {
+      city: { $regex: new RegExp(`^${city}$`, "i") },
+      typeCategory: typeCategory._id,
+      contractCategory: contractCategory._id,
+      price: {
+        $gte: isNaN(priceMin) ? 0 : priceMin,
+        $lte: isNaN(priceMax) ? Infinity : priceMax,
+      },
+      area: {
+        $gte: isNaN(areaMin) ? 0 : areaMin,
+        $lte: isNaN(areaMax) ? Infinity : areaMax,
+      },
+    };
+
+    // Rooms filter (only apply if valid)
+    if (!isNaN(rooms) && rooms >= 0) {
+      query.bedrooms = rooms;
+    }
+
+    const properties = await Property.find(query);
+
+    res.status(200).json({
+      success: true,
+      count: properties.length,
+      properties,
+    });
+  } catch (error: any) {
+    console.error("SEARCH ERROR:", error);
+    res.status(500).json({ msg: error.message });
+  }
+};
+
 // Assign category to property
-export const assignCategoryToProperty = async (req: Request, res: Response): Promise<void> => {
+export const assignCategoryToProperty = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { typeCategoryId } = req.body;
     if (!typeCategoryId) {
@@ -283,7 +440,9 @@ export const assignCategoryToProperty = async (req: Request, res: Response): Pro
     }
 
     const property = await Property.findByIdAndUpdate(
-      req.params.id, { typeCategory: typeCategoryId }, { new: true }
+      req.params.id,
+      { typeCategory: typeCategoryId },
+      { new: true }
     ).populate("typeCategory", "title");
 
     if (!property) {
@@ -298,116 +457,117 @@ export const assignCategoryToProperty = async (req: Request, res: Response): Pro
 };
 
 // Get properties by category
-export const getPropertiesByCategory = async (req: Request, res: Response): Promise<void> => {
+export const getPropertiesByCategory = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const typeCategoryId = req.params.typeCategoryId;
-    const properties = await Property.find({ typeCategory: typeCategoryId })
-      .populate("typeCategory", "title");
+    const properties = await Property.find({
+      typeCategory: typeCategoryId,
+    }).populate("typeCategory", "title");
     res.status(200).json({ msg: "Properties found successfully", properties });
   } catch (error: any) {
     res.status(500).json({ msg: error.message });
   }
 };
 
-        
-        // Search properties with optional polygon
-        // export const getPropertiesSearch = async (req: Request, res: Response): Promise<void> => {
-        //   try {
-        //     const city: string|undefined = req.params.cityName;
-        
-        //     const contract = await ContractCategory.findOne({ name: req.params.contract });
-        //     const type = await TypeCategory.findOne({ name: req.params.type });
-        
-        //     if (!contract || !type || !city) {
-        //       res.status(400).json({ msg: "Contract, type, or city not found" });
-        //       return;
-        //     }
-        
-        //     // Explicitly type req.body
-        //     const { polyArray } = req.body as { polyArray?: number[][] };
-        
-        //     if (polyArray && polyArray.length > 0) {
-        //       // close polygon loop
-        //       polyArray.push(polyArray[0]);
-        
-        //       const polygon = {
-        //         type: "Polygon",
-        //         coordinates: [polyArray],
-        //       };
-        
-        //       const properties = await Property.find({
-        //         latlng: { $geoWithin: { $geometry: polygon } },
-        //         city,
-        //         contractCategory: contract,
-        //         typeCategory: type,
-        //       })
-        //         .populate("contractCategory")
-        //         .populate("typeCategory");
-        
-        //       res.status(200).json({ msg: "success with map", properties });
-        //     } else {
-        //       const properties = await Property.find({
-        //         city,
-        //         contractCategory: contract,
-        //         typeCategory: type,
-        //       })
-        //         .populate("contractCategory")
-        //         .populate("typeCategory");
-        
-        //       res.status(200).json({ msg: "success without map", properties });
-        //     }
-        //   } catch (error: any) {
-        //     res.status(500).json({ msg: error.message });
-        //   }
-        // };
-        
-        
-        // Find properties by polygon + filters
-        // export const findPropertiesByLocations = async (req: Request, res: Response): Promise<void> => {
-        //   try {
-        //     const { polygonCoords, city, typeCat, contractCat } = req.body as {
-        //       polygonCoords: number[][];
-        //       city: string;
-        //       typeCat: string;
-        //       contractCat: string;
-        //     };
-        
-        //     if (!polygonCoords || !city || !typeCat || !contractCat) {
-        //       res.status(400).json({ msg: "polygonCoords or datas not found" });
-        //       return;
-        //     }
-        
-        //     // close polygon loop
-        //     polygonCoords.push(polygonCoords[0]);
-        
-        //     const contract = await ContractCategory.findOne({ name: contractCat });
-        //     const type = await TypeCategory.findOne({ name: typeCat });
-        
-        //     if (!contract || !type) {
-        //       res.status(400).json({ msg: "Contract or type category not found" });
-        //       return;
-        //     }
-        
-        //     const polygon = {
-        //       type: "Polygon",
-        //       coordinates: [polygonCoords],
-        //     };
-        
-        //     const results = await Property.find({
-        //       latlng: { $geoWithin: { $geometry: polygon } },
-        //       city,
-        //       contractCategory: contract,
-        //       typeCategory: type,
-        //     });
-        
-        //     if (!results.length) {
-        //       res.status(400).json({ msg: "No properties found" });
-        //       return;
-        //     }
-        
-        //     res.status(200).json({ msg: "success", results });
-        //   } catch (error: any) {
-        //     res.status(500).json({ msg: error.message });
-        //   }
-        // };
+// Search properties with optional polygon
+// export const getPropertiesSearch = async (req: Request, res: Response): Promise<void> => {
+//   try {
+//     const city: string|undefined = req.params.cityName;
 
+//     const contract = await ContractCategory.findOne({ name: req.params.contract });
+//     const type = await TypeCategory.findOne({ name: req.params.type });
+
+//     if (!contract || !type || !city) {
+//       res.status(400).json({ msg: "Contract, type, or city not found" });
+//       return;
+//     }
+
+//     // Explicitly type req.body
+//     const { polyArray } = req.body as { polyArray?: number[][] };
+
+//     if (polyArray && polyArray.length > 0) {
+//       // close polygon loop
+//       polyArray.push(polyArray[0]);
+
+//       const polygon = {
+//         type: "Polygon",
+//         coordinates: [polyArray],
+//       };
+
+//       const properties = await Property.find({
+//         latlng: { $geoWithin: { $geometry: polygon } },
+//         city,
+//         contractCategory: contract,
+//         typeCategory: type,
+//       })
+//         .populate("contractCategory")
+//         .populate("typeCategory");
+
+//       res.status(200).json({ msg: "success with map", properties });
+//     } else {
+//       const properties = await Property.find({
+//         city,
+//         contractCategory: contract,
+//         typeCategory: type,
+//       })
+//         .populate("contractCategory")
+//         .populate("typeCategory");
+
+//       res.status(200).json({ msg: "success without map", properties });
+//     }
+//   } catch (error: any) {
+//     res.status(500).json({ msg: error.message });
+//   }
+// };
+
+// Find properties by polygon + filters
+// export const findPropertiesByLocations = async (req: Request, res: Response): Promise<void> => {
+//   try {
+//     const { polygonCoords, city, typeCat, contractCat } = req.body as {
+//       polygonCoords: number[][];
+//       city: string;
+//       typeCat: string;
+//       contractCat: string;
+//     };
+
+//     if (!polygonCoords || !city || !typeCat || !contractCat) {
+//       res.status(400).json({ msg: "polygonCoords or datas not found" });
+//       return;
+//     }
+
+//     // close polygon loop
+//     polygonCoords.push(polygonCoords[0]);
+
+//     const contract = await ContractCategory.findOne({ name: contractCat });
+//     const type = await TypeCategory.findOne({ name: typeCat });
+
+//     if (!contract || !type) {
+//       res.status(400).json({ msg: "Contract or type category not found" });
+//       return;
+//     }
+
+//     const polygon = {
+//       type: "Polygon",
+//       coordinates: [polygonCoords],
+//     };
+
+//     const results = await Property.find({
+//       latlng: { $geoWithin: { $geometry: polygon } },
+//       city,
+//       contractCategory: contract,
+//       typeCategory: type,
+//     });
+
+//     if (!results.length) {
+//       res.status(400).json({ msg: "No properties found" });
+//       return;
+//     }
+
+//     res.status(200).json({ msg: "success", results });
+//   } catch (error: any) {
+//     res.status(500).json({ msg: error.message });
+//   }
+// };
